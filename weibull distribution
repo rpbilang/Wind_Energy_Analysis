@@ -1,0 +1,114 @@
+#Call libraries
+import pandas as pd
+import numpy as np
+%matplotlib inline
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.patches import Circle
+mpl.style.use('ggplot')
+import seaborn as sns
+sns.set_context('talk')
+import matplotlib.cm as cm
+from scipy.stats import linregress
+
+#Initialize Models
+#Observational Wind Speed Pililia
+data = pd.read_csv('C:\\Users\\GIL\\Desktop\\Gil Bilang\\meh\\Wind_Lidar_40and140.txt', sep=" ", header=None)
+data.columns = ['year','month','day', 'hour','40','140']
+print(data.head())
+print(data.loc[:,'40':'140'])
+
+#power density method
+def epf(ws):
+    ws_cube = []
+    for i in ws:
+        ws3 = i**3
+        ws_cube.append(ws3)
+    EPF = np.mean(ws_cube)/np.mean(ws)**3 
+    return EPF
+def k(epf):
+    shape = 1+(3.69/(epf)**2)
+    return shape
+def c(ws,k):
+    import math
+    scale = np.mean(ws)/math.gamma(1+(1/k))
+    return scale
+
+#define weibull distribution
+
+def weib(v,k,c):
+    weibull = ((k/c)*((v/c)**(k-1)))*(np.exp(-(v/c)**k))
+    return weibull
+
+#Comparing heights 40 and 140 m
+heights, bins = np.histogram(data['40'], bins=np.arange(0, data['40'].max()+1,0.5))
+bins = bins[:-1]
+
+ws40_epf = epf(data['40'])
+ws40_k = k(ws40_epf)
+ws40_c = c(data['40'],ws40_k)
+print(ws40_k,ws40_c)
+weib_40 = []
+for i in bins:
+    weibull_40 = weib(i,ws40_k,ws40_c)
+    weib_40.append(weibull_40)
+weib_40 = pd.DataFrame(weib_40)
+print(np.sum(weib_40))
+
+heights, bins140 = np.histogram(data['140'], bins=np.arange(0, data['140'].max()+1,0.5))
+bins140 = bins140[:-1]
+
+ws140_epf = epf(data['140'])
+ws140_k = k(ws140_epf)
+ws140_c = c(data['140'],ws140_k)
+print(ws140_k,ws140_c)
+weib_140 = []
+for i in bins140:
+    weibull_140 = weib(i,ws140_k,ws140_c)
+    weib_140.append(weibull_140)
+weib_140 = pd.DataFrame(weib_140)
+print(np.sum(weib_40))
+
+#creating wind histogram for 40m
+fig = plt.figure(figsize=(10,5),facecolor='white')
+ax = fig.add_subplot()
+ax.spines['bottom'].set_color('0.5')
+ax.spines['top'].set_color('0.5')
+ax.spines['right'].set_color('0.5')
+ax.spines['left'].set_color('0.5')
+plt.grid(b=True, which='major', color='0.1',lw=0.5, linestyle='-')
+plt.grid(b=True, which='minor', color='0.1', lw=0.5, linestyle='-')
+ax.hist(data['40'], bins, align='left', color='black',edgecolor='white',linewidth=0.5,density=True, alpha=1, label='Wind Speed Bins')
+ax.plot(bins,weib_40,'r--',label='Weibull distribution (POD)')
+ax.set_xlabel('Wind Speed at 40m',size=12)
+ax.set_ylabel('Frequency',size=12)
+ax.set_facecolor('xkcd:white')
+plt.legend(prop={'size': 10})
+plt.show()
+
+#Using Maximum  Likelihood Estimates
+import scipy.stats as s
+
+#40 m heigh
+params = s.weibull_min.fit(data['40'], floc=0)
+shape_40 = params[0]
+scale_40 = params[2]
+print(shape_40,scale_40)
+weibmle_40 = []
+for i in bins:
+    weibull_40 = weib(i,shape_40,scale_40)
+    weibmle_40.append(weibull_40)
+weibmle_40 = pd.DataFrame(weibmle_40)
+
+
+#140 m height
+params = s.weibull_min.fit(data['140'], floc=0)
+shape_140 = params[0]
+scale_140 = params[2]
+print(shape_140,scale_140)
+weibmle_140 = []
+for i in bins140:
+    weibull_140 = weib(i,shape_140,scale_140)
+    weibmle_140.append(weibull_140)
+weibmle_140 = pd.DataFrame(weibmle_140)
