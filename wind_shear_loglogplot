@@ -1,0 +1,38 @@
+#Call libraries
+import pandas as pd
+import numpy as np
+%matplotlib inline
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from matplotlib.patches import Circle
+mpl.style.use('ggplot')
+import seaborn as sns
+sns.set_context('talk')
+import matplotlib.cm as cm
+from scipy.stats import linregress
+
+#Initialize Models
+#Observational Wind Speed Pililia
+data = pd.read_csv('C:\\Users\\GIL\\Desktop\\Gil Bilang\\meh\\Wind_data.txt', sep=" ", header=None)
+data.columns = ['year','month','day', 'hour','40','60','80','100',
+               '120','140','150','160','180','200','225','250']
+print(data.head(30))
+print(data.loc[:,'40':'250'])
+
+# Prepare data for log-log transformation
+x = np.array(['40','60','80','100','120','140','150','160','180','200','225','250'],dtype=np.int64)
+y = np.array(data.loc[:,'40':'250'])
+
+#calculate the wind shear from the log-log plot
+shear = []
+for i in range(len(y)):
+    slope,intercept,r_value,p_value,std_err = linregress(np.log(x), np.log(y[i]))
+    shear.append([slope,intercept,r_value,p_value,std_err])
+shear1 = pd.DataFrame(shear)
+shear1.columns = ['slope','intercept','r_value','p_value','std_err']
+print(shear1['slope'])
+print('Maximum Shear is:',max(shear1['slope']))
+
+
+print('Minimum Shear is:',min(shear1['slope']))
